@@ -32,6 +32,9 @@ public class LectorArchivo {
 	private int erroresCorchetes;
 	private int erroresComas;
 
+	private int erroresCorchetesEnValor;
+	private int erroresCapitalization;
+
 	private int articles;
 	private int books;
 	private int booklets;
@@ -50,7 +53,7 @@ public class LectorArchivo {
 	private String requiredAndOptionalAnalysis;
 
 	List<Bibliography> bibliographiesInfo;
-	
+
 	private int contEntries;
 	private int contValidEntries;
 	public LectorArchivo() {
@@ -58,6 +61,8 @@ public class LectorArchivo {
 		this.erroresId = 0;
 		this.erroresCorchetes = 0;
 		this.erroresComas = 0;
+		this.erroresCorchetesEnValor = 0;
+		this.erroresCapitalization = 0;
 		this.articles = 0;
 		this.books = 0;
 		this.conferences = 0;
@@ -103,9 +108,9 @@ public class LectorArchivo {
 						erroresFormato++;
 						erroresId++;
 					}
-					
+
 					//-----------------------------------
-					toValidate = line;
+					toValidate = line + "\n";
 					cadena = "";
 
 					info = buffer.readLine();
@@ -113,6 +118,10 @@ public class LectorArchivo {
 						//fields.add((info.split("="))[0].toLowerCase().trim());
 						System.out.println(info);
 						toValidate += info;
+
+						toValidate += "\n";
+
+
 						cadena += info;
 
 						info = buffer.readLine();
@@ -124,19 +133,19 @@ public class LectorArchivo {
 					System.out.println("TO VALIDATE: " + toValidate);
 					boolean valid = validateEntry(toValidate);
 					//Añadir condicional cuando si sea valida la entrada.
-					
+
 					if(valid == true) {
 						countBibliographyTypes(type);
 						checkType(type, cadena);
 					}
-					
+
 				}
 			}
 			/*
 			printFormatErrors();
 			printBibliographyTypes();
 			printRequiredAndOptionalAnalysis();
-	*/
+			 */
 
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
@@ -156,8 +165,10 @@ public class LectorArchivo {
 		int contCorcheteDer = 0;
 		int contSignoIgual = 0;
 		int contComas = 0;
-		
+		int contCorchetesPorLlave = 0;
+
 		contEntries ++;
+
 		for(int i=0; i<toValidate.length();i++) {	
 			if(toValidate.charAt(i) == '{') {
 				contCorcheteIzq++;
@@ -169,19 +180,7 @@ public class LectorArchivo {
 				contSignoIgual++;
 			}
 		}
-		//----------------------------------------------------------------
-		//Desde aqui agregare una idea que tengo
-		String[] array = toValidate.split("=");
-		System.out.println();
-		System.out.println();
-		for(int i=0;i<array.length;i++) {
-			System.out.println("Posicion " + i + ": " + array[i]);
-		}
-		System.out.println();
-		System.out.println();
-		
-		
-		//------------------------------------------------------------------------
+
 		System.out.println();
 		System.out.println("Corchetes izquierda: " + contCorcheteIzq);
 		System.out.println("Corchetes derecha: " + contCorcheteDer);
@@ -196,12 +195,98 @@ public class LectorArchivo {
 			valid = false;
 			erroresFormato++;
 			erroresComas++;
-		}else {
+		}
+		//----------------------------------------------------------------
+		//Desde aqui agregare una idea que tengo
+
+		if(valid) {
+			String[] array = toValidate.split("\n");
+
+			System.out.println();
+			System.out.println();
+			for(int i=1;i<array.length;i++) { //Empieza en 1 por que la posicion 0 del arreglo no me interesa
+				System.out.println("Posicion " + i + ": " + array[i]);
+
+				//Revisar que al menos tenga corchetes o sino sera invalida la entrada
+
+				String[] content = array[i].split("=");
+
+				if(content.length > 1) {
+					System.out.println("CONTENT[0] = " + content[0]);
+					valid = checkCapitalization(content[0]);
+
+					if(content[1].charAt(content[1].length()-1) == ',') {
+						content[1] = content[1].substring(0, content[1].length()-1); //le quito la coma del final
+					}
+
+					valid = checkCorchetesInKey(content[1]);
+					System.out.println("CONTENT[1] = " + content[1]);
+				}
+
+
+			}
+			System.out.println();
+			System.out.println();
+		}
+
+
+		if(valid) {
 			contValidEntries++;
 		}
+
+		//------------------------------------------------------------------------
+
+
+		return valid;
+	}
+
+	private boolean checkCapitalization(String stringToCheck) {
+		stringToCheck = stringToCheck.trim();
+		boolean capitalized = Character.isUpperCase(stringToCheck.charAt(0));
+		
+		if(!capitalized) {
+			erroresCapitalization ++;
+			erroresFormato++;
+			
+		}
+		return capitalized;
+	}
+
+	private boolean checkCorchetesInKey(String stringToCheck) {
+		int izquierda = 0;
+		int derecha = 0;
+		boolean valid = true;
+		
+		for(int j=0;j<stringToCheck.length();j++) {
+			if(stringToCheck.charAt(j) == '{') {
+				izquierda++;
+			}else if(stringToCheck.charAt(j) == '}') {
+				derecha++;
+			}
+		}
+		
+		if(stringToCheck.charAt(stringToCheck.length()-1) == '}' && stringToCheck.charAt(stringToCheck.length()-2) == '}') {
+			if((izquierda != 1) || (derecha != 2)) {
+				valid = false;
+				System.out.println("ERROR");
+				erroresCorchetesEnValor++;
+				erroresFormato++;
+			}
+		}else {
+			
+
+			if((izquierda != 1) || (derecha != 1)) {
+				valid = false;
+				System.out.println("ERROR");
+				erroresCorchetesEnValor++;
+				erroresFormato++;
+			}
+		}
+		
 		
 		return valid;
 	}
+
 	private void checkType(String type, String info) {
 
 
@@ -345,39 +430,47 @@ public class LectorArchivo {
 
 	public void printFormatErrors() {
 		System.out.println();
+		System.out.println("---------------------------------------------------------------------------------------------------");
 		System.out.println("TOTAL DE ERRORES EN EL FORMATO DEL ARCHIVO: "+  erroresFormato);
 		System.out.println();
 		System.out.println("Entradas con ID faltante: " + erroresId);
 		System.out.println("Errores en cierre o apertura de corchetes en entrada bibliográfica: " + erroresCorchetes);
 		System.out.println("Errores por falta de comas separadoras en entrada bibliográfica: " + erroresComas);
+		System.out.println("Errores de corchetes en el valor de una llave (key): " + erroresCorchetesEnValor);
+		System.out.println("Errores de capitalización en la primera letra de una llave (key): " +  erroresCapitalization);
+		System.out.println("---------------------------------------------------------------------------------------------------");
 		System.out.println();
 	}
 
 	public void printBibliographyTypes() {
 		System.out.println();
+		System.out.println("---------------------------------------------------------------------------------------------------");
 		System.out.println("CONTADOR DE TIPOS DE BIBLIOGRAFIAS VALIDAS:");
 		System.out.println("De las " + contEntries + " entradas bibliográficas detectadas, " + contValidEntries + " son validas.");
 		System.out.println();
-		System.out.println("Articles: " + articles);
-		System.out.println("Books: " + books);
-		System.out.println("Booklets: " + booklets);
-		System.out.println("Conferences: " + conferences);
-		System.out.println("Inbooks: " + inbooks);
-		System.out.println("Incollections: " + incollections);
-		System.out.println("Inproceedings: " + inproceedings);
-		System.out.println("Manuals: " + manuals);
-		System.out.println("Masters Thesis: " + mastersThesis);
-		System.out.println("Miscs: " + miscs);
-		System.out.println("Phd Thesis: " + phdThesis);
-		System.out.println("Proceedings: " + proceedings);
-		System.out.println("Tech report: " + techReports);
-		System.out.println("Unpublished: " + unPublished);
+		System.out.println("\t Articles: " + articles);
+		System.out.println("\t Books: " + books);
+		System.out.println("\t Booklets: " + booklets);
+		System.out.println("\t Conferences: " + conferences);
+		System.out.println("\t Inbooks: " + inbooks);
+		System.out.println("\t Incollections: " + incollections);
+		System.out.println("\t Inproceedings: " + inproceedings);
+		System.out.println("\t Manuals: " + manuals);
+		System.out.println("\t Masters Thesis: " + mastersThesis);
+		System.out.println("\t Miscs: " + miscs);
+		System.out.println("\t Phd Thesis: " + phdThesis);
+		System.out.println("\t Proceedings: " + proceedings);
+		System.out.println("\t Tech report: " + techReports);
+		System.out.println("\t Unpublished: " + unPublished);
+		System.out.println("---------------------------------------------------------------------------------------------------");
 		System.out.println();
 	}
 
 	public void printRequiredAndOptionalAnalysis() {
 		System.out.println();
+		System.out.println("---------------------------------------------------------------------------------------------------");
 		System.out.println(this.requiredAndOptionalAnalysis);
+		System.out.println("---------------------------------------------------------------------------------------------------");
 		System.out.println();
 	}
 
