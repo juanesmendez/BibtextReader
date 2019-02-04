@@ -76,7 +76,7 @@ public class LectorArchivo {
 		this.proceedings = 0;
 		this.techReports = 0;
 		this.unPublished = 0;
-		this.requiredAndOptionalAnalysis = "ANALISIS CAMPOS REQUERIDOS Y OPCIONALES: \n\n";
+		this.requiredAndOptionalAnalysis = "ANALISIS CAMPOS REQUERIDOS Y OPCIONALES (Bibliografías válidas): \n\n";
 		this.bibliographiesInfo = new ArrayList<>();
 		this.contEntries = 0;
 		this.contValidEntries = 0;
@@ -101,14 +101,6 @@ public class LectorArchivo {
 					String array[] = line.split("\\{");
 					String type = array[0].substring(1);
 					System.out.println("TIPO: "+ type);
-					//System.out.println("pos 0: " + array[0]);
-					//Meter esto en un metodo
-					if(array.length < 2) {
-						//System.out.println("Existe un error con el formato");
-						erroresFormato++;
-						erroresId++;
-					}
-
 					//-----------------------------------
 					toValidate = line + "\n";
 					cadena = "";
@@ -132,6 +124,7 @@ public class LectorArchivo {
 					toValidate += info;
 					System.out.println("TO VALIDATE: " + toValidate);
 					boolean valid = validateEntry(toValidate);
+					countErrors(toValidate);
 					//Añadir condicional cuando si sea valida la entrada.
 
 					if(valid == true) {
@@ -141,11 +134,6 @@ public class LectorArchivo {
 
 				}
 			}
-			/*
-			printFormatErrors();
-			printBibliographyTypes();
-			printRequiredAndOptionalAnalysis();
-			 */
 
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
@@ -158,17 +146,21 @@ public class LectorArchivo {
 		return true;
 	}
 
+	private void checkAndCountIdError(String toValidate) {
+		String[] auxArray;
+		auxArray = toValidate.split("\n");
+		auxArray = auxArray[0].split("\\{");
+		if(auxArray.length < 2) { //Compruebo que tenga el ID
+			erroresId++;
+			erroresFormato++;
+		}
+	}
 
-	private boolean validateEntry(String toValidate) {
-		boolean valid = true;
+	private void checkAndCountCorcheteAndComasError(String toValidate) {
 		int contCorcheteIzq = 0;
 		int contCorcheteDer = 0;
 		int contSignoIgual = 0;
 		int contComas = 0;
-		int contCorchetesPorLlave = 0;
-
-		contEntries ++;
-
 		for(int i=0; i<toValidate.length();i++) {	
 			if(toValidate.charAt(i) == '{') {
 				contCorcheteIzq++;
@@ -187,76 +179,47 @@ public class LectorArchivo {
 		System.out.println("Comas: " + contComas);
 		System.out.println("Signo igual: " + contSignoIgual);
 		System.out.println();
-		if((contCorcheteIzq != contCorcheteDer) ) {
-			valid = false;
-			erroresFormato++;
+		if((contCorcheteIzq != contCorcheteDer)) {
 			erroresCorchetes++;
-		}else if(contSignoIgual - contComas != 1){
-			valid = false;
 			erroresFormato++;
+		}
+		if(contSignoIgual - contComas != 1) {
 			erroresComas++;
-		}
-		//----------------------------------------------------------------
-		//Desde aqui agregare una idea que tengo
-
-		if(valid) {
-			String[] array = toValidate.split("\n");
-
-			System.out.println();
-			System.out.println();
-			for(int i=1;i<array.length;i++) { //Empieza en 1 por que la posicion 0 del arreglo no me interesa
-				System.out.println("Posicion " + i + ": " + array[i]);
-
-				//Revisar que al menos tenga corchetes o sino sera invalida la entrada
-
-				String[] content = array[i].split("=");
-
-				if(content.length > 1) {
-					System.out.println("CONTENT[0] = " + content[0]);
-					valid = checkCapitalization(content[0]);
-
-					if(content[1].charAt(content[1].length()-1) == ',') {
-						content[1] = content[1].substring(0, content[1].length()-1); //le quito la coma del final
-					}
-
-					valid = checkCorchetesInKey(content[1]);
-					System.out.println("CONTENT[1] = " + content[1]);
-				}
-
-
-			}
-			System.out.println();
-			System.out.println();
+			erroresFormato++;
 		}
 
-
-		if(valid) {
-			contValidEntries++;
-		}
-
-		//------------------------------------------------------------------------
-
-
-		return valid;
 	}
 
-	private boolean checkCapitalization(String stringToCheck) {
-		stringToCheck = stringToCheck.trim();
-		boolean capitalized = Character.isUpperCase(stringToCheck.charAt(0));
-		
+	private void checkAndCountCapitalizationError(String toValidate) {
+		toValidate = toValidate.trim();
+		boolean capitalized = Character.isUpperCase(toValidate.charAt(0));
 		if(!capitalized) {
 			erroresCapitalization ++;
 			erroresFormato++;
-			
 		}
-		return capitalized;
 	}
 
-	private boolean checkCorchetesInKey(String stringToCheck) {
+	private void countErrors(String toValidate) {
+		checkAndCountIdError(toValidate);
+		checkAndCountCorcheteAndComasError(toValidate);
+		String[] array = toValidate.split("\n");
+
+		for(int i=1;i<array.length;i++) { 
+			String[] content = array[i].split("=");
+			if(content.length > 1) {
+				checkAndCountCapitalizationError(content[0]);
+				if(content[1].charAt(content[1].length()-1) == ',') {
+					content[1] = content[1].substring(0, content[1].length()-1); //le quito la coma del final
+				}
+				checkAndCountCorchetesInKeyError(content[1]);
+			}
+		}
+	}
+
+	private void checkAndCountCorchetesInKeyError(String stringToCheck) {
 		int izquierda = 0;
 		int derecha = 0;
-		boolean valid = true;
-		
+
 		for(int j=0;j<stringToCheck.length();j++) {
 			if(stringToCheck.charAt(j) == '{') {
 				izquierda++;
@@ -264,26 +227,156 @@ public class LectorArchivo {
 				derecha++;
 			}
 		}
-		
+		if(stringToCheck.charAt(stringToCheck.length()-1) == '}' && stringToCheck.charAt(stringToCheck.length()-2) == '}') {
+			if((izquierda != 1) || (derecha != 2)) {
+				erroresCorchetesEnValor++;
+				erroresCorchetes++; //Le aumento al contador de errores de corchetes en general
+				erroresFormato++;
+			}
+		}else {
+			if((izquierda != 1) || (derecha != 1)) {
+				erroresCorchetesEnValor++;
+				erroresCorchetes++;
+				erroresFormato++;
+			}
+		}
+	}
+	private boolean validateEntry(String toValidate) {
+		boolean aux;
+
+		contEntries ++;
+
+		aux = checkId(toValidate);//Compruebo que tenga el ID
+		if(!aux) { 
+			return false;
+		}
+		aux = checkCorcheteAndComas(toValidate);
+		if(!aux) {
+			return false;
+		}
+		//----------------------------------------------------------------
+		//Desde aqui agregare una idea que tengo
+		String[] array = toValidate.split("\n");
+
+		System.out.println();
+		System.out.println();
+		for(int i=1;i<array.length;i++) { //Empieza en 1 por que la posicion 0 del arreglo no me interesa
+			System.out.println("Posicion " + i + ": " + array[i]);
+
+			//Revisar que al menos tenga corchetes o sino sera invalida la entrada
+
+			String[] content = array[i].split("=");
+
+			if(content.length > 1) {
+				System.out.println("CONTENT[0] = " + content[0]);
+				aux = checkCapitalization(content[0]);
+				if(!aux) {
+					return false;
+				}
+
+				if(content[1].charAt(content[1].length()-1) == ',') {
+					content[1] = content[1].substring(0, content[1].length()-1); //le quito la coma del final
+				}
+
+				aux = checkCorchetesInKey(content[1]);
+				if(!aux) {
+					return false;
+				}
+				System.out.println("CONTENT[1] = " + content[1]);
+			}
+
+
+		}
+		System.out.println();
+		System.out.println();
+
+		contValidEntries++;
+
+		return true;
+	}
+
+	private boolean checkCorcheteAndComas(String toValidate) {
+		int contCorcheteIzq = 0;
+		int contCorcheteDer = 0;
+		int contSignoIgual = 0;
+		int contComas = 0;
+		for(int i=0; i<toValidate.length();i++) {	
+			if(toValidate.charAt(i) == '{') {
+				contCorcheteIzq++;
+			}else if(toValidate.charAt(i) == '}') {
+				contCorcheteDer++;
+			}else if(toValidate.charAt(i) == ',' && toValidate.charAt(i-1) == '}') {
+				contComas++;
+			}else if(toValidate.charAt(i) == '=') {
+				contSignoIgual++;
+			}
+		}
+
+		System.out.println();
+		System.out.println("Corchetes izquierda: " + contCorcheteIzq);
+		System.out.println("Corchetes derecha: " + contCorcheteDer);
+		System.out.println("Comas: " + contComas);
+		System.out.println("Signo igual: " + contSignoIgual);
+		System.out.println();
+		if((contCorcheteIzq != contCorcheteDer) || (contSignoIgual - contComas != 1)) {
+			return false;
+		}
+		return true;
+	}
+	private boolean checkId(String toValidate) {
+		String[] auxArray;
+		auxArray = toValidate.split("\n");
+		auxArray = auxArray[0].split("\\{");
+		if(auxArray.length < 2) { //Compruebo que tenga el ID
+			return false;
+		}
+		return true;
+	}
+	private boolean checkCapitalization(String stringToCheck) {
+		stringToCheck = stringToCheck.trim();
+		boolean capitalized = Character.isUpperCase(stringToCheck.charAt(0));
+		/*
+		if(!capitalized) {
+			erroresCapitalization ++;
+			erroresFormato++;
+
+		}*/
+		return capitalized;
+	}
+
+	private boolean checkCorchetesInKey(String stringToCheck) {
+		int izquierda = 0;
+		int derecha = 0;
+		boolean valid = true;
+
+		for(int j=0;j<stringToCheck.length();j++) {
+			if(stringToCheck.charAt(j) == '{') {
+				izquierda++;
+			}else if(stringToCheck.charAt(j) == '}') {
+				derecha++;
+			}
+		}
+
 		if(stringToCheck.charAt(stringToCheck.length()-1) == '}' && stringToCheck.charAt(stringToCheck.length()-2) == '}') {
 			if((izquierda != 1) || (derecha != 2)) {
 				valid = false;
 				System.out.println("ERROR");
-				erroresCorchetesEnValor++;
-				erroresFormato++;
+				//erroresCorchetesEnValor++;
+				//erroresCorchetes++; //Le aumento al contador de errores de corchetes en general
+				//erroresFormato++;
 			}
 		}else {
-			
+
 
 			if((izquierda != 1) || (derecha != 1)) {
 				valid = false;
 				System.out.println("ERROR");
-				erroresCorchetesEnValor++;
-				erroresFormato++;
+				//erroresCorchetesEnValor++;
+				//erroresFormato++;
 			}
 		}
-		
-		
+
+
 		return valid;
 	}
 
@@ -435,8 +528,8 @@ public class LectorArchivo {
 		System.out.println();
 		System.out.println("Entradas con ID faltante: " + erroresId);
 		System.out.println("Errores en cierre o apertura de corchetes en entrada bibliográfica: " + erroresCorchetes);
+		System.out.println("\t Errores de corchetes en el valor de una llave (key): " + erroresCorchetesEnValor);
 		System.out.println("Errores por falta de comas separadoras en entrada bibliográfica: " + erroresComas);
-		System.out.println("Errores de corchetes en el valor de una llave (key): " + erroresCorchetesEnValor);
 		System.out.println("Errores de capitalización en la primera letra de una llave (key): " +  erroresCapitalization);
 		System.out.println("---------------------------------------------------------------------------------------------------");
 		System.out.println();
@@ -446,6 +539,7 @@ public class LectorArchivo {
 		System.out.println();
 		System.out.println("---------------------------------------------------------------------------------------------------");
 		System.out.println("CONTADOR DE TIPOS DE BIBLIOGRAFIAS VALIDAS:");
+		System.out.println();
 		System.out.println("De las " + contEntries + " entradas bibliográficas detectadas, " + contValidEntries + " son validas.");
 		System.out.println();
 		System.out.println("\t Articles: " + articles);
