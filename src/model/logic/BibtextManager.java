@@ -11,30 +11,10 @@ public class BibtextManager implements IBibtextManager{
 	private LectorArchivo lector;
 	
 	public BibtextManager() {
-		this.lector = new LectorArchivo();
 	}
-	@Override
+	
 	public boolean leerArchivo(String fileName) throws IOException {
-		// TODO Auto-generated method stub
-		
-		/*
-		FileReader fileReader=null;
-		try {
-			fileReader= new FileReader(fileName);
-			BufferedReader br = new BufferedReader(fileReader);
-			String line;
-		    while ((line = br.readLine()) != null) {
-		        System.out.println(line);
-		    }
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			return false;
-		}finally {
-			fileReader.close();
-		}*/
-	    //LectorArchivo lector = new LectorArchivo();
-		
+		this.lector = new LectorArchivo();
 		return lector.read(fileName);
 	}
 	
