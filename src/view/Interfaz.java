@@ -26,7 +26,7 @@ public class Interfaz {
 
 			case 1:
 				try {
-					Controller.leerArchivo("/Users/juanestebanmendez/Documents/Los Andes/Lenguajes y Maquinas/workspace/Proyecto 0/test.bib");
+					Controller.leerArchivo("././test.bib");
 					boolean segundoFin = false;
 					while(!segundoFin) {
 						printSubMenu();
